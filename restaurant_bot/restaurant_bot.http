@@ -1,0 +1,6 @@
+@restaurant_bot_HostAddress = http://localhost:5133
+
+GET {{restaurant_bot_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
