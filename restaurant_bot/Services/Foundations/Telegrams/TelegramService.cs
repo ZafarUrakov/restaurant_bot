@@ -1,11 +1,17 @@
-﻿using restaurant_bot.Brokers.Telegrams;
-using restaurant_bot.Models.Users;
+﻿//===========================
+// Copyright (c) Tarteeb LLC
+// Order quickly and easily
+//===========================
+
+using restaurant_bot.Brokers.Telegrams;
 using restaurant_bot.Services.Foundations.Users;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
+using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 
@@ -16,14 +22,19 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         private Message Message { get; set; }
         private long ChatId { get; set; }
         private string Text { get; set; }
+
         private readonly ITelegramBotClient botClient;
         private readonly ITelegramBroker telegramBroker;
         private readonly IUserService userService;
-        private readonly Stack<(string message, 
+        private readonly Stack<(string message,
             ReplyKeyboardMarkup markup)> menuStack = new Stack<(string, ReplyKeyboardMarkup)>();
 
         public TelegramService(ITelegramBroker telegramBroker, IUserService userService)
         {
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                    .CreateLogger();
+
             string token = "6980223449:AAF69OLZRY9ICfTwrt6cWjL-cdVSTXHEx4c";
             this.botClient = new TelegramBotClient(token);
             this.telegramBroker = telegramBroker;
@@ -94,6 +105,75 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 case "Сергели":
                 case "Кукча":
                     await HandleLocationSelection(Text);
+                    break;
+                case "Бизнес-ланчи":
+                    await CreateBusinessLunchMarkup();
+                    break;
+                case "Комбо":
+                    await CreateKomboMarkup();
+                    break;
+                case "Блюда с рыбой":
+                    await CreateDishesWithFithMarkup();
+                    break;
+                case "Донары":
+                    await CreateDonarsMarkup();
+                    break;
+                case "Шашлыки":
+                    await CreateKebabsMarkup();
+                    break;
+                case "Котлетки":
+                    await CreateCutletsMarkup();
+                    break;
+                case "Бургеры":
+                    await CreateBurgersMarkup();
+                    break;
+                case "Закуски и гарниры":
+                    await CreateSnacksAndSideDishesMarkup();
+                    break;
+                case "Пицца":
+                    await CreatePizzaMarkup();
+                    break;
+                case "Пиде":
+                    await CreatePideMarkup();
+                    break;
+                case "Сэндвичи и Лаваши":
+                    await CreateSandwichesAndPitaBreadsMarkup();
+                    break;
+                case "Хот-доги":
+                    await CreateHotDogsMarkup();
+                    break;
+                case "Супы":
+                    await CreateSoupsMarkup();
+                    break;
+                case "Салаты":
+                    await CreateSaladsMarkup();
+                    break;
+                case "Соусы":
+                    await CreateSausesMarkup();
+                    break;
+                case "Лимонады":
+                    await CreateLemonadesMarkup();
+                    break;
+                case "Милк шейки":
+                    await CreateMilkShakesMarkup();
+                    break;
+                case "Смузи":
+                    await CreateSmoothieMarkup();
+                    break;
+                case "Фреш":
+                    await CreateFreshMarkup();
+                    break;
+                case "Чай":
+                    await CreateTeaMarkup();
+                    break;
+                case "Кофе":
+                    await CreateCoffeeMarkup();
+                    break;
+                case "Напитки":
+                    await CreateBevaragesMarkup();
+                    break;
+                case "Вода":
+                    await CreateWaterMarkup();
                     break;
             }
         }
@@ -353,15 +433,717 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 new[] { new KeyboardButton("Соусы"), new KeyboardButton("Лимонады") },
                 new[] { new KeyboardButton("Милк шейки"), new KeyboardButton("Смузи") },
                 new[] { new KeyboardButton("Фреш"), new KeyboardButton("Чай") },
-                new[] { new KeyboardButton("☕️ Кофе"), new KeyboardButton("Напитки") },
-                new[] { new KeyboardButton("☕️ Вода"), new KeyboardButton("⬅️ Назад") },
+                new[] { new KeyboardButton("Кофе"), new KeyboardButton("Напитки") },
+                new[] { new KeyboardButton("Вода"), new KeyboardButton("⬅️ Назад") },
             });
         }
 
+        private async Task<ReplyKeyboardMarkup> CreateBusinessLunchMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Бизнес-ланч N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Бизнес-ланч N-2"),
+                    new KeyboardButton("Бизнес-ланч N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateKomboMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Kombo N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Kombo N-2"),
+                    new KeyboardButton("Kombo N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateDishesWithFithMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Блюда с рыбой N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Блюда с рыбой N-2"),
+                    new KeyboardButton("Блюда с рыбой N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateDonarsMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Донары N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Донары N-2"),
+                    new KeyboardButton("Донары N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateKebabsMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Шашлыки N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Шашлыки N-2"),
+                    new KeyboardButton("Шашлыки N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateCutletsMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Котлетки N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Котлетки N-2"),
+                    new KeyboardButton("Котлетки N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateBurgersMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Бургеры N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Бургеры N-2"),
+                    new KeyboardButton("Бургеры N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateSnacksAndSideDishesMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Закуски и гарниры N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Закуски и гарниры N-2"),
+                    new KeyboardButton("Закуски и гарниры N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreatePizzaMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Пицца N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Пицца N-2"),
+                    new KeyboardButton("Пицца N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreatePideMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Пиде N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Пиде N-2"),
+                    new KeyboardButton("Пиде N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateSandwichesAndPitaBreadsMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Сэндвичи и Лаваши N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Сэндвичи и Лаваши N-2"),
+                    new KeyboardButton("Сэндвичи и Лаваши N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateHotDogsMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Хот-доги N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Хот-доги N-2"),
+                    new KeyboardButton("Хот-доги N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateSoupsMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Супы N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Супы N-2"),
+                    new KeyboardButton("Супы N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateSaladsMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Салаты N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Салаты N-2"),
+                    new KeyboardButton("Салаты N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateSausesMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Соусы N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Соусы N-2"),
+                    new KeyboardButton("Соусы N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateLemonadesMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Лимонады N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Лимонады N-2"),
+                    new KeyboardButton("Лимонады N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateMilkShakesMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Милк шейки N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Милк шейки N-2"),
+                    new KeyboardButton("Милк шейки N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateSmoothieMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Смузи N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Смузи N-2"),
+                    new KeyboardButton("Смузи N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateFreshMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Фреш N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Фреш N-2"),
+                    new KeyboardButton("Фреш N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateTeaMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Чай N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Чай N-2"),
+                    new KeyboardButton("Чай N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateCoffeeMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Кофе N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Кофе N-2"),
+                    new KeyboardButton("Кофе N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateBevaragesMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Напитки N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Напитки N-2"),
+                    new KeyboardButton("Напитки N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreateWaterMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new[]
+                {
+                    new KeyboardButton("Вода N-1"),
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Вода N-2"),
+                    new KeyboardButton("Вода N-3")
+                },
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("⬅️ Назад")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            string message = "Выберите раздел";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            return markup;
+        }
 
         private async Task ErrorHandler(ITelegramBotClient client, Exception exception, CancellationToken token)
         {
-            return;
+            Log.Error(exception, "Error in Telegram bot");
+
+            if (exception is ApiRequestException apiRequestException)
+            {
+                Log.Error($"Telegram API Exception - ErrorCode: {apiRequestException.ErrorCode}");
+            }
+            else
+            {
+                Log.Error($"Unknown Exception: {exception.GetType().Name}");
+            }
+
+            long userId = ChatId;
+            await client.SendTextMessageAsync(userId, "An error occurred. Please try again later.", cancellationToken: token);
         }
     }
 }
