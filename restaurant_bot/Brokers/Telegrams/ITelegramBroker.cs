@@ -11,8 +11,10 @@ namespace restaurant_bot.Brokers.Telegrams
 {
     public interface ITelegramBroker
     {
-        ValueTask<Message> SendMessageWithMarkUpAsync(long telegramId, string text, ReplyKeyboardMarkup replyMarkup);
+        ValueTask<Message> SendMessageWithMarkUpAsync(
+            long telegramId, string text, ReplyKeyboardMarkup replyMarkup);
         ValueTask<Message> SendMessageAsync(long telegramId, string text);
         ValueTask DeleteMessageAsync(long telegramId, int messageId);
+        ValueTask SendPhotoAsync(long telegramId, InputFile photo, string caption);
     }
 }

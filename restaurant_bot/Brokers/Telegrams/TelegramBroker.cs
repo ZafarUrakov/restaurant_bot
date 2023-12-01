@@ -21,7 +21,8 @@ namespace restaurant_bot.Brokers.Telegrams
             this.botClient = botClient;
         }
 
-        public async ValueTask<Message> SendMessageWithMarkUpAsync(long telegramId, string text, ReplyKeyboardMarkup replyMarkup) =>
+        public async ValueTask<Message> SendMessageWithMarkUpAsync(
+            long telegramId, string text, ReplyKeyboardMarkup replyMarkup) =>
             await this.botClient.SendTextMessageAsync(chatId: telegramId, text: text, replyMarkup: replyMarkup);
 
         public async ValueTask<Message> SendMessageAsync(long telegramId, string text) =>
@@ -29,6 +30,9 @@ namespace restaurant_bot.Brokers.Telegrams
 
         public async ValueTask DeleteMessageAsync(long telegramId, int messageId) =>
             await this.botClient.DeleteMessageAsync(telegramId, messageId);
+
+        public async ValueTask SendPhotoAsync(long telegramId, InputFile photo, string caption) =>
+            await this.botClient.SendPhotoAsync(chatId: telegramId, photo: photo, caption: caption);
 
     }
 }
