@@ -6,10 +6,8 @@
 using restaurant_bot.Brokers.Telegrams;
 using restaurant_bot.Services.Foundations.Users;
 using Serilog;
-using Swashbuckle.AspNetCore.SwaggerGen;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -17,15 +15,14 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
-using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace restaurant_bot.Services.Foundations.Telegrams
 {
     public class TelegramService : ITelegramService
     {
         private int selectedQuantity;
+        private string comment;
 
         private Message Message { get; set; }
         private long ChatId { get; set; }
@@ -112,11 +109,62 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             await HandleMenuCommand();
 
+            await ProcessBasketAction();
+
+            await HandleDishSelection();
+
+            await HandleCommetMessage();
+
             switch (Text)
             {
-                case "📥 Корзина":
-                    await SendBasketInformation();
+                case "🚖 Оформить заказ":
+                    await CreatePlaceOrderMarkup();
                     break;
+                case "⬅️ Меню":
+                    await HandleBackToMenuCommand();
+                    break;
+                case "💵 Наличные":
+                    await SendReadyOrderMessage();
+                    break;
+                case "❌ Отменить":
+                    await HandleBackCommand();
+                    break;
+            }
+
+        }
+
+        // Handle comment
+        private async Task HandleCommetMessage()
+        {
+            var user = this.userService
+                .RetrieveAllUsers().FirstOrDefault(u => u.TelegramId == ChatId);
+
+            if (user != null)
+            {
+                var menuStackMessage = menuStack.Peek().message;
+
+                if (menuStackMessage == "Напишите комментарии к заказу")
+                {
+                    if (Text != "⬅️ Назад" || Text != "⬅️ Меню")
+                    {
+                        user.Comment = Text;
+
+                        var updatedUser = await this.userService.ModifyUserAsync(user);
+
+                        var markup = await CreatePaymentMarkup();
+
+                        menuStack.Push((menuStackMessage, markup));
+                    }
+                }
+            }
+        }
+
+        // Handle all dishes
+        private async Task HandleDishSelection()
+        {
+            switch (Text)
+            {
+
                 case "Бизнес-ланч № 1":
                     await SendBusinessLunchNumberOneInformation();
                     break;
@@ -126,14 +174,16 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 case "Бизнес-ланч № 3":
                     await SendBusinessLunchNumberThreeInformation();
                     break;
-                case "1":
-                    await HandleQuantityButtonPress(Text);
-                    break;
-                case "2":
-                    await HandleQuantityButtonPress(Text);
-                    break;
-                case "3":
-                    await HandleQuantityButtonPress(Text);
+            }
+        }
+
+        // Backet processes
+        private async Task ProcessBasketAction()
+        {
+            switch (Text)
+            {
+                case "📥 Корзина":
+                    await SendBasketInformation();
                     break;
                 case "🔄 Очистить":
                     await RemoveAllDishesFromBasket();
@@ -141,13 +191,23 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 case
                 string case1 when case1.StartsWith("❌ "):
                     string separatedPart = case1.Substring(1).TrimStart();
-
                     await RemoveDishesFromBasketStartingWith(separatedPart);
                     break;
+                case "1":
+                case "2":
+                case "3":
+                case "4":
+                case "5":
+                case "6":
+                case "7":
+                case "8":
+                case "9":
+                    await HandleQuantityButtonPress(Text);
+                    break;
             }
-
         }
 
+        // Remove dishes
         private async Task RemoveAllDishesFromBasket()
         {
             List<string> keysToRemove = new List<string>();
@@ -165,7 +225,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 basket.Remove(keyToRemove);
             }
 
-            await SendBasketInformation();
+            await SendBasketInformationIfDishesDeleted();
 
         }
 
@@ -173,7 +233,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         {
             basket.Remove(dishForDelete);
 
-            await SendBasketInformation();
+            await SendBasketInformationIfDishesDeleted();
         }
 
         // Handle start section
@@ -338,38 +398,14 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 case "Бизнес-ланчи":
                     await CreateBusinessLunchMarkup();
                     break;
-                case "Комбо":
-                    await CreateKomboMarkup();
+                case "Cамса":
+                    await CreateSomsaMarkup();
                     break;
-                case "Блюда с рыбой":
-                    await CreateDishesWithFithMarkup();
-                    break;
-                case "Донары":
-                    await CreateDonarsMarkup();
+                case "Плов":
+                    await CreateOshMarkup();
                     break;
                 case "Шашлыки":
                     await CreateKebabsMarkup();
-                    break;
-                case "Котлетки":
-                    await CreateCutletsMarkup();
-                    break;
-                case "Бургеры":
-                    await CreateBurgersMarkup();
-                    break;
-                case "Закуски и гарниры":
-                    await CreateSnacksAndSideDishesMarkup();
-                    break;
-                case "Пицца":
-                    await CreatePizzaMarkup();
-                    break;
-                case "Пиде":
-                    await CreatePideMarkup();
-                    break;
-                case "Сэндвичи и Лаваши":
-                    await CreateSandwichesAndPitaBreadsMarkup();
-                    break;
-                case "Хот-доги":
-                    await CreateHotDogsMarkup();
                     break;
                 case "Супы":
                     await CreateSoupsMarkup();
@@ -377,29 +413,11 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 case "Салаты":
                     await CreateSaladsMarkup();
                     break;
-                case "Соусы":
-                    await CreateSausesMarkup();
-                    break;
-                case "Лимонады":
-                    await CreateLemonadesMarkup();
-                    break;
-                case "Милк шейки":
-                    await CreateMilkShakesMarkup();
-                    break;
-                case "Смузи":
-                    await CreateSmoothieMarkup();
-                    break;
-                case "Фреш":
-                    await CreateFreshMarkup();
-                    break;
                 case "Чай":
                     await CreateTeaMarkup();
                     break;
                 case "Кофе":
                     await CreateCoffeeMarkup();
-                    break;
-                case "Напитки":
-                    await CreateBevaragesMarkup();
                     break;
                 case "Вода":
                     await CreateWaterMarkup();
@@ -416,7 +434,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 case "Гидрометцентр":
                 case "Сергели":
                 case "Кукча":
-                    await HandleLocationSelection(Text);
+                    await HandleLocationSelection();
                     break;
             }
         }
@@ -440,6 +458,16 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             var previousMenu = menuStack.Peek();
 
             await SendMessagesWithMarkupAsync(previousMenu.message, previousMenu.markup);
+        }
+
+        private async Task HandleBackToMenuCommand()
+        {
+            ReplyKeyboardMarkup markup = CreateMenuMarkup();
+            markup.ResizeKeyboard = true;
+
+            string firstMessage = "С чего начнем?";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, firstMessage, markup);
         }
 
         private async Task HandleRussianLanguage()
@@ -468,6 +496,12 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
         private async Task HandleDeliveryCommand()
         {
+            var user = RetrieveUserByChatId();
+
+            user.OrderType = Text;
+
+            await ModifyUserAsync(user);
+
             ReplyKeyboardMarkup markup = CreateDeliveryMarkup();
             string message = "Куда нужно доставить ваш заказ 🚙?";
             await SendMessagesWithMarkupAsync(message, markup);
@@ -477,6 +511,12 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
         private async Task HandlePickupCommand()
         {
+            var user = RetrieveUserByChatId();
+
+            user.OrderType = Text;
+
+            await ModifyUserAsync(user);
+
             ReplyKeyboardMarkup markup = CreatePickupMarkup();
             string message = "Где вы находитесь 👀?\r\nЕсли вы отправите локацию 📍, мы определим ближайший к вам филиал";
             await SendMessagesWithMarkupAsync(message, markup);
@@ -509,6 +549,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             }
         }
+
         private async Task HandleContactWithouShareMessage(string contact)
         {
             if (contact is not null)
@@ -541,12 +582,12 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             if (location?.Latitude is not null)
             {
                 string secondMessage = $"Рядом с вами есть филиалы 📍";
-                ReplyKeyboardMarkup markup = CreateLocationMarkup();
+                ReplyKeyboardMarkup markup = CreatePickupMarkup();
                 await SendMessagesWithMarkupAsync(secondMessage, markup);
             }
         }
 
-        private async Task HandleLocationSelection(string location)
+        private async Task HandleLocationSelection()
         {
             ReplyKeyboardMarkup markup = CreateMenuMarkup();
             markup.ResizeKeyboard = true;
@@ -559,11 +600,6 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             menuStack.Push((secondMessage, markup));
         }
 
-        private async Task SendMessageAsync(long chatId, string message) =>
-            await telegramBroker.SendMessageAsync(ChatId, message);
-
-        private async Task SendMessagesWithMarkupAsync(string message, ReplyKeyboardMarkup markup) =>
-            await telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
 
         // Create some murkups
         private static ReplyKeyboardMarkup CreateLanguageMarkup()
@@ -672,41 +708,16 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             };
         }
 
-        private static ReplyKeyboardMarkup CreateLocationMarkup()
-        {
-            return new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("ЦУМ")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-        }
-
         private static ReplyKeyboardMarkup CreateMenuMarkup()
         {
             return new ReplyKeyboardMarkup(new[]
             {
                 new[] { new KeyboardButton("📥 Корзина"), new KeyboardButton("🚖 Оформить заказ") },
-                new[] { new KeyboardButton("Бизнес-ланчи"), new KeyboardButton("Комбо") },
-                new[] { new KeyboardButton("Блюда с рыбой"), new KeyboardButton("Донары") },
-                new[] { new KeyboardButton("Шашлыки"), new KeyboardButton("Котлетки") },
-                new[] { new KeyboardButton("Бургеры"), new KeyboardButton("Закуски и гарниры") },
-                new[] { new KeyboardButton("Пицца"), new KeyboardButton("Пиде") },
-                new[] { new KeyboardButton("Сэндвичи и Лаваши"), new KeyboardButton("Хот-доги") },
-                new[] { new KeyboardButton("Супы"), new KeyboardButton("Салаты") },
-                new[] { new KeyboardButton("Соусы"), new KeyboardButton("Лимонады") },
-                new[] { new KeyboardButton("Милк шейки"), new KeyboardButton("Смузи") },
-                new[] { new KeyboardButton("Фреш"), new KeyboardButton("Чай") },
-                new[] { new KeyboardButton("Кофе"), new KeyboardButton("Напитки") },
-                new[] { new KeyboardButton("Вода"), new KeyboardButton("⬅️ Назад") },
+                new[] { new KeyboardButton("Бизнес-ланчи"), new KeyboardButton("Cамса") },
+                new[] { new KeyboardButton("Шашлыки"), new KeyboardButton("Плов") },
+                new[] { new KeyboardButton("Салаты"), new KeyboardButton("Чай") },
+                new[] { new KeyboardButton("Кофе"), new KeyboardButton("Вода") },
+                new[] { new KeyboardButton("⬅️ Назад") },
             });
         }
 
@@ -760,26 +771,23 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             return markup;
         }
-        private async Task<ReplyKeyboardMarkup> CreateKomboMarkup()
+        private async Task<ReplyKeyboardMarkup> CreateSomsaMarkup()
         {
             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
                 },
                 new[]
                 {
-                    new KeyboardButton("Kombo N-1"),
+                    new KeyboardButton("Самса с говядиной"),
+                    new KeyboardButton("Самса с курицей")
                 },
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Kombo N-2"),
-                    new KeyboardButton("Kombo N-3")
+                    new KeyboardButton("Самса с фаршом")
                 }
             })
             {
@@ -790,56 +798,23 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             return markup;
         }
-        private async Task<ReplyKeyboardMarkup> CreateDishesWithFithMarkup()
+        private async Task<ReplyKeyboardMarkup> CreateOshMarkup()
         {
             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
                 },
                 new[]
                 {
-                    new KeyboardButton("Блюда с рыбой N-1"),
+                    new KeyboardButton("Ташкентский плов"),
+                    new KeyboardButton("Ферганский плов")
                 },
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Блюда с рыбой N-2"),
-                    new KeyboardButton("Блюда с рыбой N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateDonarsMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Донары N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Донары N-2"),
-                    new KeyboardButton("Донары N-3")
+                    new KeyboardButton("Самаркандский плов")
                 }
             })
             {
@@ -856,230 +831,17 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
                 },
                 new[]
                 {
-                    new KeyboardButton("Шашлыки N-1"),
+                    new KeyboardButton("Говядина кусковой"),
                 },
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Шашлыки N-2"),
-                    new KeyboardButton("Шашлыки N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateCutletsMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Котлетки N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Котлетки N-2"),
-                    new KeyboardButton("Котлетки N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateBurgersMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Бургеры N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Бургеры N-2"),
-                    new KeyboardButton("Бургеры N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateSnacksAndSideDishesMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Закуски и гарниры N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Закуски и гарниры N-2"),
-                    new KeyboardButton("Закуски и гарниры N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreatePizzaMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Пицца N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Пицца N-2"),
-                    new KeyboardButton("Пицца N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreatePideMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Пиде N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Пиде N-2"),
-                    new KeyboardButton("Пиде N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateSandwichesAndPitaBreadsMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Сэндвичи и Лаваши N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Сэндвичи и Лаваши N-2"),
-                    new KeyboardButton("Сэндвичи и Лаваши N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateHotDogsMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Хот-доги N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Хот-доги N-2"),
-                    new KeyboardButton("Хот-доги N-3")
+                    new KeyboardButton("Баранина кусковой"),
+                    new KeyboardButton("Люля Кебаб")
                 }
             })
             {
@@ -1096,20 +858,17 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
                 },
                 new[]
                 {
-                    new KeyboardButton("Супы N-1"),
+                    new KeyboardButton("Шурпа"),
                 },
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Супы N-2"),
-                    new KeyboardButton("Супы N-3")
+                    new KeyboardButton("Лагман"),
+                    new KeyboardButton("Мастава")
                 }
             })
             {
@@ -1126,175 +885,23 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
+
                 },
                 new[]
                 {
-                    new KeyboardButton("Салаты N-1"),
+                    new KeyboardButton("Овощной"),
+                    new KeyboardButton("Цезарь")
                 },
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Салаты N-2"),
-                    new KeyboardButton("Салаты N-3")
+                    new KeyboardButton("Оливье")
                 }
             })
             {
                 ResizeKeyboard = true
             };
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateSausesMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Соусы N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Соусы N-2"),
-                    new KeyboardButton("Соусы N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateLemonadesMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Лимонады N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Лимонады N-2"),
-                    new KeyboardButton("Лимонады N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateMilkShakesMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Милк шейки N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Милк шейки N-2"),
-                    new KeyboardButton("Милк шейки N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateSmoothieMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Смузи N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Смузи N-2"),
-                    new KeyboardButton("Смузи N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateFreshMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Фреш N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Фреш N-2"),
-                    new KeyboardButton("Фреш N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
             await SendMenuInstruction(markup);
 
             return markup;
@@ -1305,20 +912,17 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
                 },
                 new[]
                 {
-                    new KeyboardButton("Чай N-1"),
+                    new KeyboardButton("Чай черный"),
+                    new KeyboardButton("Чай зеленый")
                 },
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Чай N-2"),
-                    new KeyboardButton("Чай N-3")
+                    new KeyboardButton("Чай молочный")
                 }
             })
             {
@@ -1335,50 +939,17 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
                 },
                 new[]
                 {
-                    new KeyboardButton("Кофе N-1"),
+                    new KeyboardButton("Американо"),
+                    new KeyboardButton("Капучино")
                 },
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("Кофе N-2"),
-                    new KeyboardButton("Кофе N-3")
-                }
-            })
-            {
-                ResizeKeyboard = true
-            };
-
-            await SendMenuInstruction(markup);
-
-            return markup;
-        }
-        private async Task<ReplyKeyboardMarkup> CreateBevaragesMarkup()
-        {
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
-            {
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("📥 Корзина")
-                },
-                new[]
-                {
-                    new KeyboardButton("Напитки N-1"),
-                },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Напитки N-2"),
-                    new KeyboardButton("Напитки N-3")
+                    new KeyboardButton("Латте")
                 }
             })
             {
@@ -1395,30 +966,152 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 new KeyboardButton[]
                 {
-                    new KeyboardButton("⬅️ Назад")
-                },
-                new KeyboardButton[]
-                {
+                    new KeyboardButton("⬅️ Назад"),
                     new KeyboardButton("📥 Корзина")
                 },
                 new[]
                 {
-                    new KeyboardButton("Вода N-1"),
+                    new KeyboardButton("Вода газированная"),
+                    new KeyboardButton("Вода негазированная")
                 },
-                new KeyboardButton[]
-                {
-                    new KeyboardButton("Вода N-2"),
-                    new KeyboardButton("Вода N-3")
-                }
             })
             {
                 ResizeKeyboard = true
             };
 
             await SendMenuInstruction(markup);
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreatePlaceOrderMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Комментариев нет"),
+                },
+                new[]
+                {
+                    new KeyboardButton("⬅️ Назад"),
+                    new KeyboardButton("⬅️ Меню")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            await SendComentInstruction(markup);
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> CreatePaymentMarkup()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("💵 Наличные"),
+                },
+                new[]
+                {
+                    new KeyboardButton("💳 Payme"),
+                    new KeyboardButton("💳 Click")
+                },
+                new[]
+                {
+                    new KeyboardButton("⬅️ Назад"),
+                    new KeyboardButton("⬅️ Меню")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            await SendPaymentInstruction(markup);
+
             return markup;
         }
 
+        private async Task<ReplyKeyboardMarkup> SendReadyOrderMessage()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("✅ Заказываю"),
+                },
+                new[]
+                {
+                    new KeyboardButton("❌ Отменить"),
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            await SendReadyOrderInstruction(markup);
+
+            return markup;
+        }
+
+        // Send ready order information
+        private async Task SendReadyOrderInstruction(ReplyKeyboardMarkup markup)
+        {
+            var user = RetrieveUserByChatId();
+
+            if (user is not null)
+            {
+                StringBuilder basketInfo = new StringBuilder("Ваш заказ:\n\n");
+
+                foreach (var item in basket)
+                {
+                    int itemTotal = item.Value * prices[item.Key];
+                    basketInfo.AppendLine($"Тип заказа: {user.OrderType}\n" +
+                        $"Телефон: {user.PhoneNumber}\n" +
+                        $"Способ оплаты: {Text}\n" +
+                        $"Коментарий: {user.Comment}\n\n\n" +
+                        $"{item.Key}\n{item.Value} x {prices[item.Key]:N0} сум = {itemTotal:N0} сум\n");
+                }
+
+                basketInfo.AppendLine($"Сумма: {CalculateTotalPrice():N0} сум");
+
+                await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, basketInfo.ToString(), markup);
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        // Send payment instuction
+        private async Task SendPaymentInstruction(ReplyKeyboardMarkup markup)
+        {
+            string message = "Выберите способ оплаты за Ваш заказ";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+        }
+
+        // Send coment instruction
+        private async Task SendComentInstruction(ReplyKeyboardMarkup markup)
+        {
+            if (basket.Count == 0)
+            {
+                await this.telegramBroker.SendMessageAsync(ChatId, "Ваша корзина пуста");
+
+                return;
+            }
+            else
+            {
+                string message = "Напишите комментарии к заказу";
+
+                await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+                menuStack.Push((message, markup));
+            }
+        }
 
         // Send menu instruction
         private async Task SendMenuInstruction(ReplyKeyboardMarkup markup)
@@ -1459,16 +1152,13 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             return total;
         }
 
-        // Send basket information
         private async Task SendBasketInformation()
         {
             if (basket.Count == 0)
             {
-                var updatedMarkup = await CreateBacketMarkup(basket);
-                var updatedMessage = "Ваша корзина пуста";
-                await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, updatedMessage, updatedMarkup);
+                var emptyBacketMessage = "Ваша корзина пуста";
 
-                menuStack.Push((updatedMessage, updatedMarkup));
+                await this.telegramBroker.SendMessageAsync(ChatId, emptyBacketMessage);
 
                 return;
             }
@@ -1492,9 +1182,38 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, basketInfo.ToString(), markup);
 
-            menuStack.Push((message, markup));
         }
 
+        // Send basket information
+        private async Task SendBasketInformationIfDishesDeleted()
+        {
+            if (basket.Count == 0)
+            {
+                var updatedMessage = "Ваша корзина пуста";
+
+                int stepsToGoBack = 3;
+
+                for (int i = 0; i < stepsToGoBack; i++)
+                {
+                    if (menuStack.Count > 1)
+                    {
+                        menuStack.Pop();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                var previousMenu = menuStack.Peek();
+
+                await SendMessagesWithMarkupAsync(updatedMessage, previousMenu.markup);
+
+                return;
+            }
+
+
+        }
 
         //Update status
         private async Task UpdateUserStatusBasedOnPrice()
@@ -1548,8 +1267,6 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 await this.telegramBroker.SendMessageAsync(ChatId,
                     "Некорректное количество. Пожалуйста, выберите количество с клавиатуры.");
             }
-
-            await HandleBackCommand();
         }
 
         private async Task AddToBasket(string itemName, int quantity)
@@ -1563,8 +1280,14 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 basket[itemName] = quantity;
             }
 
-            await this.telegramBroker.SendMessageAsync(
-                ChatId, $"Добавлено в корзину:  {itemName}  ({quantity} шт.)");
+            ReplyKeyboardMarkup markup = CreateMenuMarkup();
+
+            markup.ResizeKeyboard = true;
+
+            string message = "Продолжим? 😉";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
         }
 
         // Send dishes information
@@ -1628,9 +1351,21 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
 
-            menuStack.Push((message, markup));
 
         }
+
+        // Send Messages
+        private async Task SendMessageAsync(long chatId, string message) =>
+            await telegramBroker.SendMessageAsync(ChatId, message);
+
+        private async Task SendMessagesWithMarkupAsync(string message, ReplyKeyboardMarkup markup) =>
+            await telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+        private Models.Users.User RetrieveUserByChatId() =>
+            this.userService.RetrieveAllUsers().FirstOrDefault(U => U.TelegramId == ChatId);
+
+        private async ValueTask<Models.Users.User> ModifyUserAsync(Models.Users.User user) =>
+            await this.userService.ModifyUserAsync(user);
 
         // Handle errors
         private async Task ErrorHandler(ITelegramBotClient client, Exception exception, CancellationToken token)
