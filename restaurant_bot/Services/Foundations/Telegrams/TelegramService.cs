@@ -122,6 +122,11 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                     break;
                 case "⬅️ Меню":
                     await HandleBackToMenuCommand();
+                    if (menuStack.Count >= 2)
+                    {
+                        menuStack.Pop();
+                        menuStack.Pop();
+                    }
                     break;
                 case "💵 Наличные":
                     await SendReadyOrderMessage();
@@ -145,7 +150,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
                 if (menuStackMessage == "Напишите комментарии к заказу")
                 {
-                    if (Text != "⬅️ Назад" || Text != "⬅️ Меню")
+                    if (Text != "⬅️ Назад" && Text != "⬅️ Меню" && Text != "❌ Отменить" && Text != "💵 Наличные")
                     {
                         user.Comment = Text;
 
@@ -153,11 +158,16 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
                         var markup = await CreatePaymentMarkup();
 
-                        menuStack.Push((menuStackMessage, markup));
+                        string message = "Выберите способ оплаты за Ваш заказ";
+
+                        await SendMessagesWithMarkupAsync(message, markup);
+
+                        menuStack.Push((message, markup));
                     }
                 }
             }
         }
+
 
         // Handle all dishes
         private async Task HandleDishSelection()
@@ -447,17 +457,58 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             ReplyKeyboardMarkup markup = CreateLanguageMarkup();
             await SendMessagesWithMarkupAsync(greetings, markup);
-
-            menuStack.Clear();
         }
 
         private async Task HandleBackCommand()
         {
-            menuStack.Pop();
+            if (menuStack.Count > 0)
+            {
+                var poppedItem = menuStack.Pop();
 
-            var previousMenu = menuStack.Peek();
+                if (poppedItem.message == "Продолжим? 😁")
+                {
+                    if (menuStack.Count > 0)
+                    {
+                        menuStack.Pop();
+                        menuStack.Pop();
 
-            await SendMessagesWithMarkupAsync(previousMenu.message, previousMenu.markup);
+                        await SendMessagesWithMarkupAsync(poppedItem.message, poppedItem.markup);
+                    }
+                }
+                else
+                {
+                    if (menuStack.Count > 2)
+                    {
+                    }
+                    try
+                    {
+                        var poppedItem2 = menuStack.Peek();
+
+                        if (poppedItem2.message == "Продолжим? ")
+                        {
+                            menuStack.Pop();
+                        }
+
+                        await SendMessagesWithMarkupAsync(poppedItem2.message, poppedItem2.markup);
+                    }
+                    catch (Exception ex) { throw ex; }
+
+                }
+            }
+        }
+        private async Task HandleBackCommandIfDishSelected()
+        {
+
+            if (menuStack.Count > 0)
+            {
+                //menuStack.Pop();
+
+                var poppedItem = menuStack.Peek();
+
+                await SendMessagesWithMarkupAsync(poppedItem.message, poppedItem.markup);
+
+                //menuStack.Pop();
+            }
         }
 
         private async Task HandleBackToMenuCommand()
@@ -465,9 +516,11 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             ReplyKeyboardMarkup markup = CreateMenuMarkup();
             markup.ResizeKeyboard = true;
 
-            string firstMessage = "С чего начнем?";
+            string message = "Продолжим? 😁";
 
-            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, firstMessage, markup);
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
         }
 
         private async Task HandleRussianLanguage()
@@ -1028,11 +1081,8 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 ResizeKeyboard = true
             };
 
-            await SendPaymentInstruction(markup);
-
             return markup;
         }
-
         private async Task<ReplyKeyboardMarkup> SendReadyOrderMessage()
         {
             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
@@ -1054,6 +1104,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             return markup;
         }
+
 
         // Send ready order information
         private async Task SendReadyOrderInstruction(ReplyKeyboardMarkup markup)
@@ -1082,16 +1133,6 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 return;
             }
-        }
-
-        // Send payment instuction
-        private async Task SendPaymentInstruction(ReplyKeyboardMarkup markup)
-        {
-            string message = "Выберите способ оплаты за Ваш заказ";
-
-            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
-
-            menuStack.Push((message, markup));
         }
 
         // Send coment instruction
@@ -1182,6 +1223,8 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, basketInfo.ToString(), markup);
 
+            menuStack.Push((message, markup));
+
         }
 
         // Send basket information
@@ -1191,28 +1234,27 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 var updatedMessage = "Ваша корзина пуста";
 
-                int stepsToGoBack = 3;
-
-                for (int i = 0; i < stepsToGoBack; i++)
-                {
-                    if (menuStack.Count > 1)
-                    {
-                        menuStack.Pop();
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
                 var previousMenu = menuStack.Peek();
 
-                await SendMessagesWithMarkupAsync(updatedMessage, previousMenu.markup);
+                var markup = await CreateBacketMarkup(basket);
+
+                await SendMessagesWithMarkupAsync(updatedMessage, markup);
 
                 return;
             }
+            else
+            {
+                var updatedMessage = "Удалено";
+
+                var previousMenu = menuStack.Peek();
+
+                var markup = await CreateBacketMarkup(basket);
 
 
+                await SendMessagesWithMarkupAsync(updatedMessage, markup);
+
+                return;
+            }
         }
 
         //Update status
@@ -1280,14 +1322,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 basket[itemName] = quantity;
             }
 
-            ReplyKeyboardMarkup markup = CreateMenuMarkup();
-
-            markup.ResizeKeyboard = true;
-
-            string message = "Продолжим? 😉";
-
-            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
-
+            await HandleBackCommandIfDishSelected();
         }
 
         // Send dishes information
@@ -1309,6 +1344,8 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             string message = $"Продолжим ? 😃";
 
             await SendMessagesWithMarkupAsync(message, markup);
+
+            menuStack.Clear();
 
             menuStack.Push((message, markup));
         }
