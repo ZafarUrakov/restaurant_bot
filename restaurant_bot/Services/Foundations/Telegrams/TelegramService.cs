@@ -1311,54 +1311,61 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         {
             var user = RetrieveUser();
 
-            var order = RetrieveOrderByUserIdAsync(user.Id);
-
-            if (order.PaymentMethod == "💵 Наличные")
+            if (user is not null)
             {
-                string message = "Спасибо, ваш заказ принят, " +
-                    "как только оператор его подтвердит, вы получите уведомление.";
+                var order = RetrieveOrderByUserIdAsync(user.Id);
 
-                await SendMessageAsync(message);
-
-                await ComeToMainAgain();
-
-                System.Timers.Timer timer = new System.Timers.Timer(60000);
-                timer.Elapsed += async (sender, e) =>
+                if (order.PaymentMethod == "💵 Наличные")
                 {
-                    string secondMessage = "Ваш заказ подтвержден. Спасибо за покупку!";
-                    await SendMessageAsync(secondMessage);
+                    string message = "Спасибо, ваш заказ принят, " +
+                        "как только оператор его подтвердит, вы получите уведомление.";
 
-                    timer.Stop();
+                    await SendMessageAsync(message);
 
-                };
+                    await ComeToMainAgain();
 
-                timer.Start();
+                    System.Timers.Timer timer = new System.Timers.Timer(60000);
+                    timer.Elapsed += async (sender, e) =>
+                    {
+                        string secondMessage = "Ваш заказ подтвержден. Спасибо за покупку!";
+                        await SendMessageAsync(secondMessage);
+
+                        timer.Stop();
+
+                    };
+
+                    timer.Start();
+                }
+                else
+                {
+                    string message = "Ваш заказ создан, пожалуйста, оплатите его.";
+
+                    await SendMessageAsync(message);
+
+                    string message2 = $"Оплата через Click\r\nСумма к оплате: {order.TotalAmount} сум.\r\n" +
+                        "Что бы оплатить нажмите на кнопку \"✅ Оплатить\".";
+
+                    await botClient.SendTextMessageAsync(
+                    chatId: ChatId,
+                    text: message2,
+                    replyMarkup: new InlineKeyboardMarkup(
+                        InlineKeyboardButton.WithUrl(
+                            text: "✅ Оплатить",
+                            url: "https://ru.wikipedia.org/wiki/Hello,_world!")));
+
+                    var replyMarkup = await SendReadyOrderMessage();
+
+                    await botClient.SendTextMessageAsync(
+                        chatId: ChatId,
+                        text: string.Empty,
+                        replyMarkup: replyMarkup
+                    );
+
+                }
             }
             else
             {
-                string message = "Ваш заказ создан, пожалуйста, оплатите его.";
-
-                await SendMessageAsync(message);
-
-                string message2 = $"Оплата через Click\r\nСумма к оплате: {order.TotalAmount} сум.\r\n" +
-                    "Что бы оплатить нажмите на кнопку \"✅ Оплатить\".";
-
-                await botClient.SendTextMessageAsync(
-                chatId: ChatId,
-                text: message2,
-                replyMarkup: new InlineKeyboardMarkup(
-                    InlineKeyboardButton.WithUrl(
-                        text: "✅ Оплатить",
-                        url: "https://ru.wikipedia.org/wiki/Hello,_world!")));
-
-                var replyMarkup =  await SendReadyOrderMessage();
-
-                await botClient.SendTextMessageAsync(
-                    chatId: ChatId,
-                    text: string.Empty,
-                    replyMarkup: replyMarkup
-                );
-
+                return;
             }
         }
 
