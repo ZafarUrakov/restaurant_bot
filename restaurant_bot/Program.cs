@@ -5,6 +5,7 @@ using restaurant_bot.Brokers.Storages;
 using restaurant_bot.Brokers.Telegrams;
 using restaurant_bot.Services.Foundations.Dishes;
 using restaurant_bot.Services.Foundations.Orders;
+using restaurant_bot.Services.Foundations.Reviews;
 using restaurant_bot.Services.Foundations.Telegrams;
 using restaurant_bot.Services.Foundations.Users;
 using Telegram.Bot;
@@ -16,6 +17,7 @@ builder.Services.AddDbContext<IStorageBroker, StorageBroker>();
 builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddTransient<IOrderService, OrderService>();
 builder.Services.AddTransient<IDishService, DishService>();
+builder.Services.AddTransient<IReviewService, ReviewService>();
 builder.Services.AddSingleton<ITelegramBotClient>
     (new TelegramBotClient("6791582951:AAHxUSKIwmC1p49kR-KTM5tCSNMUOQ9EWmY"));
 builder.Services.AddScoped<ITelegramBroker, TelegramBroker>();
