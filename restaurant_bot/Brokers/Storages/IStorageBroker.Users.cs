@@ -3,10 +3,10 @@
 // Order quickly and easily
 //===========================
 
+using restaurant_bot.Models.Users;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System;
-using restaurant_bot.Models.Users;
 
 namespace restaurant_bot.Brokers.Storages
 {

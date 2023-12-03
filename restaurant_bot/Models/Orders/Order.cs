@@ -7,7 +7,6 @@ using restaurant_bot.Models.Dishes;
 using restaurant_bot.Models.Users;
 using System;
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
 
 namespace restaurant_bot.Models.Orders
 {
@@ -16,7 +15,7 @@ namespace restaurant_bot.Models.Orders
         public Guid Id { get; set; }
         public string OrderType { get; set; } = string.Empty;
         public string PaymentMethod { get; set; } = string.Empty;
-        public string Comment{ get; set; } = string.Empty;
+        public string Comment { get; set; } = string.Empty;
 
         public List<Dish> Dishes { get; set; } = new List<Dish>();
         public decimal TotalAmount { get; set; }

@@ -3,13 +3,10 @@
 // Order quickly and easily
 //===========================
 
-using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace restaurant_bot.Brokers.Telegrams
 {

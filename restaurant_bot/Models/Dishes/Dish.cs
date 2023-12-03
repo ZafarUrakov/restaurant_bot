@@ -15,6 +15,6 @@ namespace restaurant_bot.Models.Dishes
         public decimal Price { get; set; }
 
         public Guid OrderId { get; set; }
-        public Order order{ get; set; }
+        public Order order { get; set; }
     }
 }

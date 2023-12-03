@@ -20,7 +20,7 @@ namespace restaurant_bot.Models.Users
         public string PhoneNumber { get; set; }
         public string Location { get; set; } = string.Empty;
 
-        public List<Review> Reviews{ get; set; }
+        public List<Review> Reviews { get; set; }
         public List<Order> Orders { get; set; }
     }
 }
