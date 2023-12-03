@@ -3,7 +3,9 @@
 // Order quickly and easily
 //===========================
 
+using restaurant_bot.Models.Orders;
 using System;
+using System.Collections.Generic;
 
 namespace restaurant_bot.Models.Users
 {
@@ -12,10 +14,10 @@ namespace restaurant_bot.Models.Users
         public Guid Id { get; set; }
         public long TelegramId { get; set; }
         public string Status { get; set; } = string.Empty;
-        public string Comment { get; set; } = string.Empty;
-        public string OrderType { get; set; } = string.Empty;
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string PhoneNumber { get; set; }
+
+        public List<Order> Orders { get; set; }
     }
 }

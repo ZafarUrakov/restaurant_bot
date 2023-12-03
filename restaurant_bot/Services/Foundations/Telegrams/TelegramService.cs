@@ -4,6 +4,10 @@
 //===========================
 
 using restaurant_bot.Brokers.Telegrams;
+using restaurant_bot.Models.Dishes;
+using restaurant_bot.Models.Orders;
+using restaurant_bot.Services.Foundations.Dishes;
+using restaurant_bot.Services.Foundations.Orders;
 using restaurant_bot.Services.Foundations.Users;
 using Serilog;
 using System;
@@ -15,6 +19,7 @@ using System.Threading.Tasks;
 using Telegram.Bot;
 using Telegram.Bot.Exceptions;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 using Telegram.Bot.Types.ReplyMarkups;
 
 namespace restaurant_bot.Services.Foundations.Telegrams
@@ -31,29 +36,36 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         private readonly ITelegramBotClient botClient;
         private readonly ITelegramBroker telegramBroker;
         private readonly IUserService userService;
+        private readonly IOrderService orderService;
+        private readonly IDishService dishService;
         private readonly Stack<(string message,
             ReplyKeyboardMarkup markup)> menuStack = new Stack<(string, ReplyKeyboardMarkup)>();
 
-        private Dictionary<string, int> basket = new Dictionary<string, int>();
+        private Dictionary<string, decimal> basket = new Dictionary<string, decimal>();
 
-        private static readonly Dictionary<string?, int> prices = new Dictionary<string?, int>
+        private static readonly Dictionary<string?, decimal> prices = new Dictionary<string?, decimal>
         {
             { "Бизнес-ланч № 1", 60000 },
             { "Бизнес-ланч № 2", 65000 },
             { "Бизнес-ланч № 3", 68000 }
         };
 
-
-        public TelegramService(ITelegramBroker telegramBroker, IUserService userService)
+        public TelegramService(
+            ITelegramBroker telegramBroker,
+            IUserService userService,
+            IOrderService orderService,
+            IDishService dishService)
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
                     .CreateLogger();
 
-            string token = "6980223449:AAF69OLZRY9ICfTwrt6cWjL-cdVSTXHEx4c";
+            string token = "6791582951:AAHxUSKIwmC1p49kR-KTM5tCSNMUOQ9EWmY";
             this.botClient = new TelegramBotClient(token);
             this.telegramBroker = telegramBroker;
             this.userService = userService;
+            this.orderService = orderService;
+            this.dishService = dishService;
         }
 
         public void StartListening()
@@ -113,67 +125,15 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             await HandleDishSelection();
 
-            await HandleCommetMessage();
+            await HandleCommentMessage();
 
-            switch (Text)
-            {
-                case "🚖 Оформить заказ":
-                    await CreatePlaceOrderMarkup();
-                    break;
-                case "⬅️ Меню":
-                    await HandleBackToMenuCommand();
-                    if (menuStack.Count >= 2)
-                    {
-                        menuStack.Pop();
-                        menuStack.Pop();
-                    }
-                    break;
-                case "💵 Наличные":
-                    await SendReadyOrderMessage();
-                    break;
-                case "❌ Отменить":
-                    await HandleBackCommand();
-                    break;
-                case "✅ Заказываю":
-                    await SendOrderConfirmationMessageAsync();
-                    break;
-            }
+            await HandleCreateOrderSection();
+
+            await HandleBackToMenuSection();
+
+            await HandlePaymentSection();
 
         }
-
-        // Handle comment
-        private async Task HandleCommetMessage()
-        {
-            var user = this.userService
-                .RetrieveAllUsers().FirstOrDefault(u => u.TelegramId == ChatId);
-
-            if (user != null)
-            {
-                var menuStackMessage = menuStack.Peek().message;
-
-                if (menuStackMessage == "Напишите комментарии к заказу")
-                {
-                    if (Text != "⬅️ Назад" && Text != "⬅️ Меню" && Text != "❌ Отменить" && Text != "💵 Наличные")
-                    {
-                        if (Text == "Комментариев нет")
-                            user.Comment = String.Empty;
-                        else
-                            user.Comment = Text;
-
-                        var updatedUser = await this.userService.ModifyUserAsync(user);
-
-                        var markup = await CreatePaymentMarkupAsync();
-
-                        string message = "Выберите способ оплаты за Ваш заказ";
-
-                        await SendMessagesWithMarkupAsync(message, markup);
-
-                        menuStack.Push((message, markup));
-                    }
-                }
-            }
-        }
-
 
         // Handle all dishes
         private async Task HandleDishSelection()
@@ -207,7 +167,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 case
                 string case1 when case1.StartsWith("❌ "):
                     string separatedPart = case1.Substring(1).TrimStart();
-                    if(separatedPart == "Отменить")
+                    if (separatedPart == "Отменить")
                     {
                         return;
                     }
@@ -387,6 +347,123 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 "☎️ Связаться с нами", "ℹ️ Информация", "⚙️ Настройки" };
         }
 
+
+        // Handle comment
+        private async Task HandleCommentMessage()
+        {
+            var user = RetrieveUser();
+
+            if (user != null)
+            {
+                var order = RetrieveOrderByUserIdAsync(user.Id);
+
+                if (order is not null)
+                {
+
+                    var menuStackMessage = menuStack.Peek().message;
+
+                    if (menuStackMessage == "Напишите комментарии к заказу")
+                    {
+                        if (Text != "⬅️ Назад" && Text != "⬅️ Меню" && Text != "❌ Отменить" && Text != "💵 Наличные")
+                        {
+                            if (Text == "Комментариев нет")
+                                order.Comment = String.Empty;
+                            else
+                                order.Comment = Text;
+
+                            var markup = await CreatePaymentMarkupAsyncLayerOne();
+
+                            string message = "Выберите способ оплаты за Ваш заказ";
+
+                            await SendMessagesWithMarkupAsync(message, markup);
+
+                            menuStack.Push((message, markup));
+                        }
+                    }
+                    else if (menuStackMessage == "Напишите кoмментарии к заказу")
+                    {
+                        if (Text != "⬅️ Назад" && Text != "⬅️ Мeню" && Text != "❌ Отменить" && Text != "💵 Наличные")
+                        {
+                            if (Text == "Кoмментариев нет")
+                                order.Comment = String.Empty;
+                            else
+                                order.Comment = Text;
+
+                            var markup = await CreatePaymentMarkupAsyncLayerTwo();
+
+                            string message = "Выберите способ оплаты за Ваш заказ";
+
+                            await SendMessagesWithMarkupAsync(message, markup);
+
+                            menuStack.Push((message, markup));
+                        }
+                    }
+
+                    await ModifyOrderAsync(order);
+                }
+                else
+                {
+                    var newOrder = new Order
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user.Id
+                    };
+
+                    await this.orderService.AddOrderAsync(newOrder);
+                }
+            }
+        }
+
+        // Handle create order section
+        private async Task HandleCreateOrderSection()
+        {
+            switch (Text)
+            {
+                case "🚖 Оформить заказ":
+                    await CreatePlaceOrderMarkupLayerOne();
+                    break;
+                case "🚖 Oформить заказ":
+                    await CreatePlaceOrderMarkupLayerTwo();
+                    break;
+            }
+        }
+
+        // Handle back to menu section
+        private async Task HandleBackToMenuSection()
+        {
+            switch (Text)
+            {
+
+                case "⬅️ Меню":
+                    await HandleBackToMenuCommandLayerOne();
+                    break;
+                case "⬅️ Мeню":
+                    await HandleBackToMenuCommandLayerTwo();
+                    break;
+            }
+        }
+
+        // Handle payment section
+        private async Task HandlePaymentSection()
+        {
+            switch (Text)
+            {
+
+                case "💵 Наличные":
+                case "💳 Click":
+                case "💳 Payme":
+                    await SendOrderConfirmationMessageAsync();
+                    break;
+                case "❌ Отменить":
+                    await HandleBackCommand();
+                    break;
+                case "✅ Заказываю":
+                    await SendOrderConfirmationMessageAsync();
+                    break;
+            }
+        }
+
+
         // Handle other sections...
         private async Task HandleOrderSectionCommands()
         {
@@ -520,20 +597,18 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             }
         }
 
-        private async Task HandleBackToMenuCommand()
+        private async Task HandleBackToMenuCommandLayerOne()
         {
             if (menuStack.Peek().message == "Выберите способ оплаты за Ваш заказ")
             {
-                if (paymentMethodPopCount < 1)
-                {
-                    menuStack.Pop();
-                    paymentMethodPopCount++;
-                }
-                else
-                {
-                    menuStack.Pop();
-                    menuStack.Pop();
-                }
+                menuStack.Peek();
+                menuStack.Pop();
+                menuStack.Pop();
+            }
+            else
+            {
+                menuStack.Peek();
+                menuStack.Pop();
             }
 
             ReplyKeyboardMarkup markup = CreateMenuMarkup();
@@ -545,6 +620,38 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
 
             menuStack.Push((message, markup));
+
+            if (menuStack.Count >= 2)
+                menuStack.Pop();
+        }
+        private async Task HandleBackToMenuCommandLayerTwo()
+        {
+            if (menuStack.Peek().message == "Выберите способ оплаты за Ваш заказ")
+            {
+                menuStack.Peek();
+                menuStack.Pop();
+                menuStack.Pop();
+                menuStack.Pop();
+            }
+            else
+            {
+                menuStack.Peek();
+                menuStack.Pop();
+                menuStack.Pop();
+            }
+
+            ReplyKeyboardMarkup markup = CreateMenuMarkup();
+
+            markup.ResizeKeyboard = true;
+
+            string message = "Продолжим? 😁";
+
+            await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+            menuStack.Push((message, markup));
+
+            if (menuStack.Count >= 2)
+                menuStack.Pop();
         }
 
         private async Task HandleRussianLanguage()
@@ -573,11 +680,28 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
         private async Task HandleDeliveryCommand()
         {
-            var user = RetrieveUserByChatId();
+            var user = RetrieveUser();
 
-            user.OrderType = Text;
+            var order = RetrieveOrderByUserIdAsync(user.Id);
 
-            await ModifyUserAsync(user);
+            if (order is not null)
+            {
+                order.OrderType = Text;
+
+                await ModifyOrderAsync(order);
+            }
+            else
+            {
+                var newOrder = new Order
+                {
+                    Id = Guid.NewGuid(),
+                    OrderType = Text,
+                    UserId = user.Id
+                };
+
+                await this.orderService.AddOrderAsync(newOrder);
+            }
+
 
             ReplyKeyboardMarkup markup = CreateDeliveryMarkup();
             string message = "Куда нужно доставить ваш заказ 🚙?";
@@ -588,11 +712,27 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
         private async Task HandlePickupCommand()
         {
-            var user = RetrieveUserByChatId();
+            var user = RetrieveUser();
 
-            user.OrderType = Text;
+            var order = RetrieveOrderByUserIdAsync(user.Id);
 
-            await ModifyUserAsync(user);
+            if (order is not null)
+            {
+                order.OrderType = Text;
+
+                await ModifyOrderAsync(order);
+            }
+            else
+            {
+                var newOrder = new Order
+                {
+                    Id = Guid.NewGuid(),
+                    OrderType = Text,
+                    UserId = user.Id
+                };
+
+                await this.orderService.AddOrderAsync(newOrder);
+            }
 
             ReplyKeyboardMarkup markup = CreatePickupMarkup();
             string message = "Где вы находитесь 👀?\r\nЕсли вы отправите локацию 📍, мы определим ближайший к вам филиал";
@@ -798,7 +938,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             });
         }
 
-        private Task<ReplyKeyboardMarkup> CreateBacketMarkup(Dictionary<string, int> dishes)
+        private Task<ReplyKeyboardMarkup> CreateBacketMarkup(Dictionary<string, decimal> dishes)
         {
             var buttons = new List<KeyboardButton[]>();
 
@@ -809,7 +949,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             buttons.Add(new KeyboardButton[] { new KeyboardButton("⬅️ Назад"), new KeyboardButton("🔄 Очистить") });
 
-            buttons.Add(new KeyboardButton[] { new KeyboardButton("🚖 Оформить заказ") });
+            buttons.Add(new KeyboardButton[] { new KeyboardButton("🚖 Oформить заказ") });
 
             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(buttons.ToArray())
             {
@@ -1060,7 +1200,9 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             return markup;
         }
-        private async Task<ReplyKeyboardMarkup> CreatePlaceOrderMarkup()
+
+        // Order and payment layer
+        private async Task<ReplyKeyboardMarkup> CreatePlaceOrderMarkupLayerOne()
         {
             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
             {
@@ -1078,11 +1220,34 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 ResizeKeyboard = true
             };
 
-            await SendComentInstruction(markup);
+            await SendComentInstructionLayerOne(markup);
 
             return markup;
         }
-        private async Task<ReplyKeyboardMarkup> CreatePaymentMarkupAsync()
+        private async Task<ReplyKeyboardMarkup> CreatePlaceOrderMarkupLayerTwo()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("Кoмментариев нет"),
+                },
+                new[]
+                {
+                    new KeyboardButton("⬅️ Назад"),
+                    new KeyboardButton("⬅️ Мeню")
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            await SendComentInstructionLayerTwo(markup);
+
+            return markup;
+        }
+
+        private async Task<ReplyKeyboardMarkup> CreatePaymentMarkupAsyncLayerOne()
         {
             return await Task.Run(() =>
             {
@@ -1110,32 +1275,110 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 return markup;
             });
         }
+        private async Task<ReplyKeyboardMarkup> CreatePaymentMarkupAsyncLayerTwo()
+        {
+            return await Task.Run(() =>
+            {
+                ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+                {
+            new KeyboardButton[]
+            {
+                new KeyboardButton("💵 Наличные"),
+            },
+            new[]
+            {
+                new KeyboardButton("💳 Payme"),
+                new KeyboardButton("💳 Click")
+            },
+            new[]
+            {
+                new KeyboardButton("⬅️ Назад"),
+                new KeyboardButton("⬅️ Мeню")
+            }
+                })
+                {
+                    ResizeKeyboard = true
+                };
+
+                return markup;
+            });
+        }
+
+
 
         // Send order confirmation message
         private async Task SendOrderConfirmationMessageAsync()
         {
-            string message = "Спасибо, ваш заказ принят, " +
-                "как только оператор его подтвердит, вы получите уведомление.";
+            var user = RetrieveUser();
 
-            await SendMessageAsync(message);
+            var order = RetrieveOrderByUserIdAsync(user.Id);
 
-            await ComeToMainAgain();
-
-            System.Timers.Timer timer = new System.Timers.Timer(60000); 
-            timer.Elapsed += async (sender, e) =>
+            if (order.PaymentMethod == "💵 Наличные")
             {
-                string secondMessage = "Ваш заказ подтвержден. Спасибо за покупку!";
-                await SendMessageAsync(secondMessage);
+                string message = "Спасибо, ваш заказ принят, " +
+                    "как только оператор его подтвердит, вы получите уведомление.";
 
-                timer.Stop();
+                await SendMessageAsync(message);
 
-            };
+                await ComeToMainAgain();
 
-            timer.Start();
+                System.Timers.Timer timer = new System.Timers.Timer(60000);
+                timer.Elapsed += async (sender, e) =>
+                {
+                    string secondMessage = "Ваш заказ подтвержден. Спасибо за покупку!";
+                    await SendMessageAsync(secondMessage);
+
+                    timer.Stop();
+
+                };
+
+                timer.Start();
+            }
+            else
+            {
+                string message = "Ваш заказ создан, пожалуйста, оплатите его.";
+
+                await SendMessageAsync(message);
+
+                string message2 = $"Оплата через Click\r\nСумма к оплате: {order.TotalAmount} сум.\r\n" +
+                    "Что бы оплатить нажмите на кнопку \"✅ Оплатить\".";
+
+                await botClient.SendTextMessageAsync(
+                chatId: ChatId,
+                text: message2,
+                replyMarkup: new InlineKeyboardMarkup(
+                    InlineKeyboardButton.WithUrl(
+                        text: "✅ Оплатить",
+                        url: "https://ru.wikipedia.org/wiki/Hello,_world!")));
+
+                var replyMarkup =  await SendReadyOrderMessage();
+
+                await botClient.SendTextMessageAsync(
+                    chatId: ChatId,
+                    text: string.Empty,
+                    replyMarkup: replyMarkup
+                );
+
+            }
         }
 
         // Send ready order information
         private async Task<ReplyKeyboardMarkup> SendReadyOrderMessage()
+        {
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
+            {
+                new KeyboardButton[]
+                {
+                    new KeyboardButton("✅ Оплачено"),
+                }
+            })
+            {
+                ResizeKeyboard = true
+            };
+
+            return markup;
+        }
+        private async Task<ReplyKeyboardMarkup> SendPayedMarkup()
         {
             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(new KeyboardButton[][]
             {
@@ -1158,28 +1401,32 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         }
         private async Task SendReadyOrderInstruction(ReplyKeyboardMarkup markup)
         {
-            var user = RetrieveUserByChatId();
+            var user = RetrieveUser();
 
             if (user is not null)
             {
                 StringBuilder basketInfo = new StringBuilder();
 
-                if(user.Comment == "")
+                var order = RetrieveOrderByUserIdAsync(user.Id);
 
-                basketInfo.AppendLine($"Тип заказа: {user.OrderType}\n" +
+                order.PaymentMethod = Text;
+
+                basketInfo.AppendLine($"Тип заказа: {order.OrderType}\n" +
                                       $"Телефон: +{user.PhoneNumber}\n" +
-                                      $"Способ оплаты: {Text}\n" +
-                                      $"Коментарий: {user.Comment}\n\n");
+                                      $"Способ оплаты: {order.PaymentMethod}\n" +
+                                      $"Коментарий: {order.Comment}\n\n");
 
-                foreach (var item in basket)
-                {
-                    int itemTotal = item.Value * prices[item.Key];
-                    basketInfo.AppendLine($"{item.Key}\n{item.Value} x {prices[item.Key]:N0} сум = {itemTotal:N0} сум\n");
-                }
+                await ProcessBasketItemAsync(basketInfo, order);
 
                 basketInfo.AppendLine($"Сумма: {CalculateTotalPrice():N0} сум");
 
+                order.TotalAmount = CalculateTotalPrice();
+
+                await ModifyOrderAsync(order);
+
                 await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, basketInfo.ToString(), markup);
+
+                basket.Clear();
             }
             else
             {
@@ -1187,9 +1434,29 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             }
         }
 
+        private async Task ProcessBasketItemAsync(StringBuilder basketInfo, Order order)
+        {
+            foreach (var item in basket)
+            {
+                decimal itemTotal = item.Value * prices[item.Key];
+                basketInfo.AppendLine($"{item.Key}\n{item.Value} x {prices[item.Key]:N0} сум = {itemTotal:N0} сум\n");
+
+                Dish dish = new Dish
+                {
+                    Id = Guid.NewGuid(),
+                    Name = item.Key,
+                    Price = prices[item.Key],
+                    OrderId = order.Id
+                };
+
+                await this.dishService.AddDishAsync(dish);
+
+                order.Dishes.Add(dish);
+            }
+        }
 
         // Send coment instruction
-        private async Task SendComentInstruction(ReplyKeyboardMarkup markup)
+        private async Task SendComentInstructionLayerOne(ReplyKeyboardMarkup markup)
         {
             if (basket.Count == 0)
             {
@@ -1200,6 +1467,23 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             else
             {
                 string message = "Напишите комментарии к заказу";
+
+                await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
+
+                menuStack.Push((message, markup));
+            }
+        }
+        private async Task SendComentInstructionLayerTwo(ReplyKeyboardMarkup markup)
+        {
+            if (basket.Count == 0)
+            {
+                await this.telegramBroker.SendMessageAsync(ChatId, "Ваша корзина пуста");
+
+                return;
+            }
+            else
+            {
+                string message = "Напишите кoмментарии к заказу";
 
                 await this.telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
 
@@ -1233,12 +1517,12 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         }
 
         // Calculate total price
-        private int CalculateTotalPrice()
+        private decimal CalculateTotalPrice()
         {
-            int total = 0;
+            decimal total = 0;
             foreach (var item in basket)
             {
-                if (prices.TryGetValue(item.Key, out int price))
+                if (prices.TryGetValue(item.Key, out decimal price))
                 {
                     total += price * item.Value;
                 }
@@ -1261,7 +1545,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             foreach (var item in basket)
             {
-                int itemTotal = item.Value * prices[item.Key];
+                decimal itemTotal = item.Value * prices[item.Key];
                 basketInfo.AppendLine($"{item.Key}\n{item.Value} x {prices[item.Key]:N0} сум = {itemTotal:N0} сум\n");
             }
 
@@ -1338,7 +1622,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         // Add to basket
         private async Task HandleQuantityButtonPress(string quantity)
         {
-            var user = RetrieveUserByChatId();
+            var user = RetrieveUser();
 
             if (user is not null)
             {
@@ -1409,7 +1693,6 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             menuStack.Push((message, markup));
         }
 
-
         // // Send dishes information
         private async Task SendBusinessLunchNumberTwoInformation()
         {
@@ -1457,11 +1740,14 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         private async Task SendMessagesWithMarkupAsync(string message, ReplyKeyboardMarkup markup) =>
             await telegramBroker.SendMessageWithMarkUpAsync(ChatId, message, markup);
 
-        private Models.Users.User RetrieveUserByChatId() =>
+        private Models.Users.User RetrieveUser() =>
             this.userService.RetrieveAllUsers().FirstOrDefault(U => U.TelegramId == ChatId);
 
-        private async ValueTask<Models.Users.User> ModifyUserAsync(Models.Users.User user) =>
-            await this.userService.ModifyUserAsync(user);
+        private Order RetrieveOrderByUserIdAsync(Guid userId) =>
+            this.orderService.RetrieveAllOrders().FirstOrDefault(o => o.UserId == userId);
+
+        private async ValueTask<Order> ModifyOrderAsync(Order order) =>
+            await this.orderService.ModifyOrderAsync(order);
 
         // Handle errors
         private async Task ErrorHandler(ITelegramBotClient client, Exception exception, CancellationToken token)
