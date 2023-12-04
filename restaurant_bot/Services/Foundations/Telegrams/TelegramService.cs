@@ -863,8 +863,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         {
             string greetings = "Добро пожаловать в Tarteeb restaurant!";
             string promptForPhoneNumber = "📱 Какой у Вас номер? Отправьте ваш номер телефона.\r\n\r\n" +
-                                         "Чтобы отправить номер нажмите на кнопку \"📱 Отправить мой номер\", или \r\n" +
-                                         "Отправьте номер в формате: +998 ** *** ****";
+                                         "Чтобы отправить номер нажмите на кнопку \"📞 Поделиться контактом 📞";
 
             ReplyKeyboardMarkup markup =
                 new ReplyKeyboardMarkup(KeyboardButton.WithRequestContact("📞 Поделиться контактом 📞"));
@@ -1697,7 +1696,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                     if (order.OrderType == "🚖 Доставка")
                     {
 
-                        string sendSecondMessage = $"Tarteeb restaurant\n\n" +
+                        string sendSecondMessage = $"Hybrid SSL restaurant\n\n" +
                             $"Приехал курьер Zafar и ожидает вас по адресу " +
                             $"{user.Location} \n Для связи с курьером @zafar_urakov \n" +
                             $"\n\n Спасибо за покупку 😊 \n\n Приятного аппетита 😋";
