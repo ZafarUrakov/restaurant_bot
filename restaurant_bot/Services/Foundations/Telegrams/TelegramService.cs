@@ -104,33 +104,39 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
         private async Task MessageHandler(ITelegramBotClient client, Update update, CancellationToken token)
         {
-
-            if (update.Message is not null)
+            try
             {
-                if (update.Message.Voice is not null)
+                if (update.Message is not null)
                 {
-                    Voice = update.Message.Voice;
-                }
+                    if (update.Message.Voice is not null)
+                    {
+                        Voice = update.Message.Voice;
+                    }
 
-                Message = update.Message;
-                ChatId = update.Message.Chat.Id;
-                Text = update.Message.Text;
+                    Message = update.Message;
+                    ChatId = update.Message.Chat.Id;
+                    Text = update.Message.Text;
 
-                if (Text is not null)
-                {
-                    await HandleTextMessageRu();
+                    if (Text is not null)
+                    {
+                        await HandleTextMessageRu();
+                    }
+                    else if (update.Message.Contact?.PhoneNumber is not null)
+                    {
+                        await HandleContactMessageRu(update.Message.Contact);
+                    }
+                    else if (update.Message.Location?.Latitude is not null)
+                    {
+                        await HandleLocationMessageRu(update.Message.Location);
+                    }
                 }
-                else if (update.Message.Contact?.PhoneNumber is not null)
-                {
-                    await HandleContactMessageRu(update.Message.Contact);
-                }
-                else if (update.Message.Location?.Latitude is not null)
-                {
-                    await HandleLocationMessageRu(update.Message.Location);
-                }
-
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Error in MessageHandler: {ex}");
             }
         }
+
 
         // Handle TEXT Message
         private async Task HandleTextMessageRu()
@@ -2356,21 +2362,29 @@ namespace restaurant_bot.Services.Foundations.Telegrams
         // Handle errors
         private async Task ErrorHandler(ITelegramBotClient client, Exception exception, CancellationToken token)
         {
-            Log.Error(exception, "Error in Telegram bot");
-
-            if (exception is ApiRequestException apiRequestException)
+            try
             {
-                Log.Error($"Telegram API Exception - ErrorCode: {apiRequestException.ErrorCode}");
+                Log.Error(exception, "Error in Telegram bot");
+
+                if (exception is ApiRequestException apiRequestException)
+                {
+                    Log.Error($"Telegram API Exception - ErrorCode: {apiRequestException.ErrorCode}");
+                }
+                else
+                {
+                    Log.Error($"Unknown Exception: {exception.GetType().Name}");
+                }
+
+                long userId = 1924521160;
+
+                await client.SendTextMessageAsync(userId, "An error occurred. Please try again later.", cancellationToken: token);
             }
-            else
+            catch (Exception ex)
             {
-                Log.Error($"Unknown Exception: {exception.GetType().Name}");
+                Log.Error($"Error in ErrorHandler: {ex}");
             }
-
-            long userId = 1924521160;
-
-            await client.SendTextMessageAsync(userId, "An error occurred. Please try again later.", cancellationToken: token);
         }
+
 
         // Send Messages
         private async Task SendMessageAsync(string message) =>
