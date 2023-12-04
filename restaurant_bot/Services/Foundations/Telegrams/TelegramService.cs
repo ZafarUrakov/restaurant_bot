@@ -1696,7 +1696,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                     if (order.OrderType == "🚖 Доставка")
                     {
 
-                        string sendSecondMessage = $"Hybrid SSL restaurant\n\n" +
+                        string sendSecondMessage = $"Tarteeb restaurant\n\n" +
                             $"Приехал курьер Zafar и ожидает вас по адресу " +
                             $"{user.Location} \n Для связи с курьером @zafar_urakov \n" +
                             $"\n\n Спасибо за покупку 😊 \n\n Приятного аппетита 😋";
