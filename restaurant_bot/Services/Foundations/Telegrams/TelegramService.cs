@@ -692,7 +692,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 switch (Text)
                 {
-                    case "⬅️ Назад" when menuStack.Count > 1:
+                    case "⬅️ Назад" when menuStack.Count >= 1:
                         await HandleBackCommandRu();
                         break;
                     case "🚖 Доставка":
