@@ -368,11 +368,15 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                     case "/start":
                         await HandleStartCommandRu();
                         break;
-                    default:
-                        await this.telegramBroker
-                            .SendMessageAsync(ChatId, "Произошло обновление базы данных. Введите или нажмите /start");
-                        break;
                 }
+            }
+
+            if(Text != "🇷🇺 Русский" 
+               || Text != "/start"
+               || Text != "🇬🇧 English"
+               || Text != "🇺🇿 O'zbekcha")
+            {
+                await SendMessageAsync("Произошло обновление базы данных. Введите или нажмите /start");
             }
 
             else if (Text is "/start")
