@@ -20,19 +20,11 @@ namespace restaurant_bot.Brokers.Storages
 
         public async ValueTask<T> InsertAsync<T>(T @object)
         {
-            try
-            {
-                var broker = new StorageBroker();
-                broker.Entry(@object).State = EntityState.Added;
-                await broker.SaveChangesAsync();
+            var broker = new StorageBroker();
+            broker.Entry(@object).State = EntityState.Added;
+            await broker.SaveChangesAsync();
 
-                return @object;
-            }
-            catch (Exception ex)
-            {
-
-                throw ex;
-            }
+            return @object;
         }
 
         public IQueryable<T> SelectAll<T>() where T : class
@@ -61,18 +53,11 @@ namespace restaurant_bot.Brokers.Storages
 
         public async ValueTask<T> DeleteAsync<T>(T @object)
         {
-            try
-            {
-                var broker = new StorageBroker();
-                broker.Entry(@object).State = EntityState.Deleted;
-                await broker.SaveChangesAsync();
+            var broker = new StorageBroker();
+            broker.Entry(@object).State = EntityState.Deleted;
+            await broker.SaveChangesAsync();
 
-                return @object;
-            }
-            catch (Exception)
-            {
-                throw;
-            }
+            return @object;
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

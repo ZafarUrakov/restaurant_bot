@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using restaurant_bot.Brokers.Storages;
 using restaurant_bot.Brokers.Telegrams;
 using restaurant_bot.Services.Foundations.Dishes;
@@ -38,11 +37,8 @@ using (var scope = scopeFactory.CreateScope())
 }
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseHttpsRedirection();
 
