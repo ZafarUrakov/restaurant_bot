@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -360,6 +361,10 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
                     case "/start":
                         await HandleStartCommandRu();
+                        break;
+                    default:
+                        await this.telegramBroker
+                            .SendMessageAsync(ChatId, "Произошло обновление базы данных. Введите или нажмите /start");
                         break;
                 }
             }
