@@ -3,9 +3,10 @@
 // Order quickly and easily
 //===========================
 
-namespace restaurant_bot.Brokers.Telegrams
+namespace restaurant_bot.Services.Foundations.Telegrams
 {
-    public interface ITelegramBot
+    public interface ITelegramService
     {
+        void StartListening();
     }
 }
