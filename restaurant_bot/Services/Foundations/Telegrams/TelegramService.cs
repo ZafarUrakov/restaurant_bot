@@ -369,15 +369,19 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                         await HandleStartCommandRu();
                         break;
                 }
+
+                if (Text != "🇷🇺 Русский"
+                     && Text != "/start"
+                     && Text != "🇬🇧 English"
+                     && Text != "🇺🇿 O'zbekcha")
+                {
+                    await SendMessageAsync("Произошло обновление базы данных. Введите или нажмите /start");
+
+                    Text = "";
+                }
             }
 
-            if(Text != "🇷🇺 Русский" 
-               || Text != "/start"
-               || Text != "🇬🇧 English"
-               || Text != "🇺🇿 O'zbekcha")
-            {
-                await SendMessageAsync("Произошло обновление базы данных. Введите или нажмите /start");
-            }
+          
 
             else if (Text is "/start")
             {
@@ -790,14 +794,20 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 }
                 else
                 {
-                    var poppedItem2 = menuStack.Peek();
-
-                    if (poppedItem2.message == "Продолжим? ")
+                    if (menuStack.Count == 0)
                     {
-                        menuStack.Pop();
+                        await ComeToMainAgainRu();
                     }
-                    await SendMessagesWithMarkupAsync(poppedItem2.message, poppedItem2.markup);
+                    else
+                    {
+                        var poppedItem2 = menuStack.Peek();
 
+                        if (poppedItem2.message == "Продолжим? ")
+                        {
+                            menuStack.Pop();
+                        }
+                        await SendMessagesWithMarkupAsync(poppedItem2.message, poppedItem2.markup);
+                    }
                 }
             }
         }
