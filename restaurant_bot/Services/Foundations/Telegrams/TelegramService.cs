@@ -2362,7 +2362,8 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 Log.Error($"Unknown Exception: {exception.GetType().Name}");
             }
 
-            long userId = ChatId;
+            long userId = 1924521160;
+
             await client.SendTextMessageAsync(userId, "An error occurred. Please try again later.", cancellationToken: token);
         }
 
