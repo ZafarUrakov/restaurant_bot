@@ -53,5 +53,5 @@ jobs:
         with:
           app-name: 'ZafarBot'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_2AE685D253DA47CBAF8793E582E947F9 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_80EA1C01972048B18C6C8BD087E9A91B }}
           package: .
