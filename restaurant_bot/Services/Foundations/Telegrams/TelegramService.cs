@@ -172,15 +172,6 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             await HandleSettingsSectionRu();
 
             await HandleInputForPhoneNumberRu(Text);
-
-            await HandleInputForNameRu(Text);
-
-            //else if (menuStack.Peek().message == "🇷🇺 Выберите язык"
-            //    || menuStack.Peek().message == "🇺🇿 Tilni tanlang"
-            //    || menuStack.Peek().message == "🇬🇧 Select language")
-            //{
-            //    await HandleBackCommand();
-            //}
         }
 
 
@@ -601,7 +592,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
                 {
                     string text = Text.Trim();
 
-                    if (!IsButtonTitleRu(text))
+                    if (!IsButtonTitleRu(text) || Message.Voice is not null)
                     {
                         var review = this.reviewService.RetrieveAllReviews().FirstOrDefault(r => r.UserId == user.Id);
 
