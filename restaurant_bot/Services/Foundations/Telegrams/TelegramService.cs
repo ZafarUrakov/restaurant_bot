@@ -108,11 +108,6 @@ namespace restaurant_bot.Services.Foundations.Telegrams
             {
                 if (update.Message is not null)
                 {
-                    if (update.Message.Voice is not null)
-                    {
-                        Voice = update.Message.Voice;
-                    }
-
                     Message = update.Message;
                     ChatId = update.Message.Chat.Id;
                     Text = update.Message.Text;
@@ -588,11 +583,11 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
             if (user is not null)
             {
-                if (menuStack.Peek().message == "Оставьте отзыв в виде сообщения или аудиосообщения")
+                if (menuStack.Peek().message == "Оставьте отзыв в виде сообщения")
                 {
                     string text = Text.Trim();
 
-                    if (!IsButtonTitleRu(text) || Message.Voice is not null)
+                    if (!IsButtonTitleRu(text))
                     {
                         var review = this.reviewService.RetrieveAllReviews().FirstOrDefault(r => r.UserId == user.Id);
 
@@ -2315,7 +2310,7 @@ namespace restaurant_bot.Services.Foundations.Telegrams
 
                 var removeKeyboard = new ReplyKeyboardRemove();
 
-                string message = "Оставьте отзыв в виде сообщения или аудиосообщения";
+                string message = "Оставьте отзыв в виде сообщения";
 
                 await botClient.SendTextMessageAsync(ChatId, message, replyMarkup: removeKeyboard);
 
